@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1F4E79;
+      --navy-light: #2E75B6;
+      --navy-dark: #163759;
+      --accent: #2E75B6;
+      --bg: #F4F7FB;
+      --surface: #FFFFFF;
+      --border: #D0DCE8;
+      --text: #1A2533;
+      --text-muted: #6B7B8D;
+      --row-alt: #EAF1F8;
+      --danger: #C0392B;
+      --danger-hover: #96281B;
+      --success: #1E7B4B;
+      --shadow: 0 2px 8px rgba(31,78,121,0.10);
+      --radius: 8px;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--navy);
+      color: #fff;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    }
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    header span {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      font-weight: 400;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 32px 12px;
+      flex-wrap: wrap;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 220px;
+      max-width: 380px;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+
+    .filter-wrap select {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .filter-wrap select:focus { border-color: var(--accent); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--navy); color: #fff; }
+    .btn-primary:hover { background: var(--navy-dark); }
+    .btn-sm { padding: 5px 10px; font-size: 0.80rem; font-weight: 500; }
+    .btn-edit { background: #EAF1F8; color: var(--navy); border: 1px solid var(--border); }
+    .btn-edit:hover { background: #D6E4F0; }
+    .btn-delete { background: #FDECEA; color: var(--danger); border: 1px solid #F5C6C2; }
+    .btn-delete:hover { background: #F5C6C2; }
+
+    .count-badge {
+      margin-left: auto;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ── Table container ── */
+    .table-container {
+      margin: 0 32px 32px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    thead tr {
+      background: var(--navy);
+      color: #fff;
+    }
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.80rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    th:hover { background: var(--navy-light); }
+    th .sort-icon { margin-left: 4px; opacity: 0.6; font-style: normal; font-size: 0.75rem; }
+    th.sorted .sort-icon { opacity: 1; }
+    th:last-child { cursor: default; text-align: center; }
+    th:last-child:hover { background: var(--navy); }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:nth-child(even) { background: var(--row-alt); }
+    tbody tr:hover { background: #D6E4F0 !important; }
+
+    td {
+      padding: 10px 14px;
+      vertical-align: top;
+      line-height: 1.45;
+    }
+    td.comments { max-width: 260px; white-space: pre-wrap; word-break: break-word; }
+    td .pill {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      background: #D6E4F0;
+      color: var(--navy);
+      white-space: nowrap;
+    }
+    td .project-id {
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    td .actions { display: flex; gap: 6px; justify-content: center; }
+
+    .empty-state {
+      padding: 56px 32px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .empty-state svg { margin-bottom: 12px; opacity: 0.35; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(10,20,40,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+      overflow: hidden;
+      animation: slideUp 0.18s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(24px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal-header {
+      background: var(--navy);
+      color: #fff;
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h2 { font-size: 1rem; font-weight: 600; }
+    .modal-close {
+      background: none; border: none; color: #fff;
+      font-size: 1.3rem; cursor: pointer; line-height: 1;
+      opacity: 0.75; transition: opacity 0.15s;
+    }
+    .modal-close:hover { opacity: 1; }
+
+    .modal-body { padding: 22px; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.80rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    input[type="text"], select, textarea {
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input[type="text"]:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(46,117,182,0.15);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    .field-error { font-size: 0.78rem; color: var(--danger); margin-top: 2px; }
+    .modal-footer {
+      padding: 14px 22px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: #F8FAFE;
+    }
+    .btn-cancel { background: #EEF2F7; color: var(--text); border: 1px solid var(--border); }
+    .btn-cancel:hover { background: var(--border); }
+
+    /* ── Delete confirm ── */
+    .confirm-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(10,20,40,0.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .confirm-backdrop.open { display: flex; }
+    .confirm-box {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 28px 28px 22px;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+      text-align: center;
+    }
+    .confirm-box h3 { margin-bottom: 8px; font-size: 1rem; }
+    .confirm-box p { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px; }
+    .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: var(--danger-hover); }
+
+    @media (max-width: 700px) {
+      header, .toolbar, .table-container { padding-left: 16px; padding-right: 16px; }
+      .table-container { margin: 0 16px 24px; }
+      .form-grid { grid-template-columns: 1fr; }
+      table { font-size: 0.80rem; }
+      td, th { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Project Tracker</h1>
+  <span id="headerDate"></span>
+</header>
+
+<div class="toolbar">
+  <div class="search-wrap">
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="8.5" cy="8.5" r="5.5"/><line x1="13.5" y1="13.5" x2="18" y2="18"/>
+    </svg>
+    <input id="searchInput" type="text" placeholder="Search projects…" autocomplete="off" />
+  </div>
+  <div class="filter-wrap">
+    <select id="stepFilter">
+      <option value="">All Steps</option>
+    </select>
+  </div>
+  <div class="filter-wrap">
+    <select id="repFilter">
+      <option value="">All CSS Reps</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" onclick="openAddModal()">
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M11 9V4H9v5H4v2h5v5h2v-5h5V9h-5z"/></svg>
+    Add Project
+  </button>
+  <span class="count-badge" id="countBadge"></span>
+</div>
+
+<div class="table-container">
+  <table id="projectTable">
+    <thead>
+      <tr>
+        <th onclick="sortBy('clientName')" data-col="clientName">Client Name <em class="sort-icon">↕</em></th>
+        <th onclick="sortBy('projectId')" data-col="projectId">Project ID <em class="sort-icon">↕</em></th>
+        <th onclick="sortBy('projectName')" data-col="projectName">Project Name <em class="sort-icon">↕</em></th>
+        <th onclick="sortBy('projectStep')" data-col="projectStep">Project Step <em class="sort-icon">↕</em></th>
+        <th onclick="sortBy('cssRep')" data-col="cssRep">CSS Rep <em class="sort-icon">↕</em></th>
+        <th onclick="sortBy('consultantComments')" data-col="consultantComments">Consultant Comments <em class="sort-icon">↕</em></th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="backdropClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add Project</h2>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="f_clientName">Client Name</label>
+          <input type="text" id="f_clientName" placeholder="e.g. Acme Corp" />
+          <span class="field-error" id="e_clientName"></span>
+        </div>
+        <div class="form-group">
+          <label for="f_projectId">Project ID</label>
+          <input type="text" id="f_projectId" placeholder="e.g. PRJ-0042" />
+          <span class="field-error" id="e_projectId"></span>
+        </div>
+        <div class="form-group full">
+          <label for="f_projectName">Project Name</label>
+          <input type="text" id="f_projectName" placeholder="e.g. ERP Implementation" />
+          <span class="field-error" id="e_projectName"></span>
+        </div>
+        <div class="form-group">
+          <label for="f_projectStep">Project Step</label>
+          <input type="text" id="f_projectStep" placeholder="e.g. Discovery" list="stepSuggestions" />
+          <datalist id="stepSuggestions">
+            <option value="Discovery"/>
+            <option value="Planning"/>
+            <option value="Design"/>
+            <option value="Development"/>
+            <option value="Testing"/>
+            <option value="Review"/>
+            <option value="Deployment"/>
+            <option value="Closed"/>
+          </datalist>
+          <span class="field-error" id="e_projectStep"></span>
+        </div>
+        <div class="form-group">
+          <label for="f_cssRep">CSS Rep</label>
+          <input type="text" id="f_cssRep" placeholder="e.g. Jane Smith" />
+          <span class="field-error" id="e_cssRep"></span>
+        </div>
+        <div class="form-group full">
+          <label for="f_consultantComments">Consultant Comments</label>
+          <textarea id="f_consultantComments" placeholder="Add notes, status updates, blockers…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="confirm-backdrop" id="confirmBackdrop">
+  <div class="confirm-box">
+    <h3>Delete Project?</h3>
+    <p id="confirmMsg">This action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const STORAGE_KEY = 'projectTrackerData_v1';
+  let projects = [];
+  let editingId = null;
+  let deleteTargetId = null;
+  let sortCol = 'clientName';
+  let sortAsc = true;
+
+  // ── Persistence ────────────────────────────────────────────────────────────
+  function load() {
+    try { projects = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { projects = []; }
+  }
+  function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function getFiltered() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    const step = document.getElementById('stepFilter').value;
+    const rep = document.getElementById('repFilter').value;
+    return projects.filter(p => {
+      const matchQ = !q || Object.values(p).some(v => String(v).toLowerCase().includes(q));
+      const matchStep = !step || p.projectStep === step;
+      const matchRep = !rep || p.cssRep === rep;
+      return matchQ && matchStep && matchRep;
+    });
+  }
+
+  function getSorted(list) {
+    return [...list].sort((a, b) => {
+      const va = String(a[sortCol] || '').toLowerCase();
+      const vb = String(b[sortCol] || '').toLowerCase();
+      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  }
+
+  function renderTable() {
+    const filtered = getSorted(getFiltered());
+    const tbody = document.getElementById('tableBody');
+
+    document.getElementById('countBadge').textContent =
+      filtered.length === projects.length
+        ? `${projects.length} project${projects.length !== 1 ? 's' : ''}`
+        : `${filtered.length} of ${projects.length} projects`;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/>
+            <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/>
+          </svg>
+          <p>${projects.length === 0 ? 'No projects yet. Click <strong>Add Project</strong> to get started.' : 'No projects match your filters.'}</p>
+        </div>
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(p => `
+      <tr>
+        <td>${esc(p.clientName)}</td>
+        <td><span class="project-id">${esc(p.projectId)}</span></td>
+        <td>${esc(p.projectName)}</td>
+        <td><span class="pill">${esc(p.projectStep)}</span></td>
+        <td>${esc(p.cssRep)}</td>
+        <td class="comments">${esc(p.consultantComments)}</td>
+        <td><div class="actions">
+          <button class="btn btn-sm btn-edit" onclick="openEditModal('${p.id}')">Edit</button>
+          <button class="btn btn-sm btn-delete" onclick="openConfirm('${p.id}')">Delete</button>
+        </div></td>
+      </tr>`).join('');
+  }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function rebuildFilters() {
+    const steps = [...new Set(projects.map(p => p.projectStep).filter(Boolean))].sort();
+    const reps  = [...new Set(projects.map(p => p.cssRep).filter(Boolean))].sort();
+    const stepSel = document.getElementById('stepFilter');
+    const repSel  = document.getElementById('repFilter');
+    const curStep = stepSel.value, curRep = repSel.value;
+    stepSel.innerHTML = '<option value="">All Steps</option>' + steps.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    repSel.innerHTML  = '<option value="">All CSS Reps</option>' + reps.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join('');
+    stepSel.value = curStep; repSel.value = curRep;
+  }
+
+  // ── Sort ───────────────────────────────────────────────────────────────────
+  function sortBy(col) {
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = true; }
+    document.querySelectorAll('th[data-col]').forEach(th => {
+      th.classList.toggle('sorted', th.dataset.col === sortCol);
+      if (th.dataset.col === sortCol) {
+        th.querySelector('.sort-icon').textContent = sortAsc ? '↑' : '↓';
+      } else {
+        th.querySelector('.sort-icon').textContent = '↕';
+      }
+    });
+    renderTable();
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  function openAddModal() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Add Project';
+    clearForm();
+    document.getElementById('modalBackdrop').classList.add('open');
+    document.getElementById('f_clientName').focus();
+  }
+
+  function openEditModal(id) {
+    const p = projects.find(x => x.id === id);
+    if (!p) return;
+    editingId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Project';
+    document.getElementById('f_clientName').value = p.clientName || '';
+    document.getElementById('f_projectId').value = p.projectId || '';
+    document.getElementById('f_projectName').value = p.projectName || '';
+    document.getElementById('f_projectStep').value = p.projectStep || '';
+    document.getElementById('f_cssRep').value = p.cssRep || '';
+    document.getElementById('f_consultantComments').value = p.consultantComments || '';
+    clearErrors();
+    document.getElementById('modalBackdrop').classList.add('open');
+    document.getElementById('f_clientName').focus();
+  }
+
+  function closeModal() {
+    document.getElementById('modalBackdrop').classList.remove('open');
+    editingId = null;
+  }
+
+  function backdropClick(e) {
+    if (e.target === document.getElementById('modalBackdrop')) closeModal();
+  }
+
+  function clearForm() {
+    ['f_clientName','f_projectId','f_projectName','f_projectStep','f_cssRep','f_consultantComments']
+      .forEach(id => document.getElementById(id).value = '');
+    clearErrors();
+  }
+
+  function clearErrors() {
+    ['e_clientName','e_projectId','e_projectName','e_projectStep','e_cssRep']
+      .forEach(id => document.getElementById(id).textContent = '');
+  }
+
+  function saveProject() {
+    clearErrors();
+    const clientName = document.getElementById('f_clientName').value.trim();
+    const projectId  = document.getElementById('f_projectId').value.trim();
+    const projectName = document.getElementById('f_projectName').value.trim();
+    const projectStep = document.getElementById('f_projectStep').value.trim();
+    const cssRep = document.getElementById('f_cssRep').value.trim();
+    const consultantComments = document.getElementById('f_consultantComments').value.trim();
+
+    let valid = true;
+    if (!clientName)  { document.getElementById('e_clientName').textContent  = 'Required'; valid = false; }
+    if (!projectId)   { document.getElementById('e_projectId').textContent   = 'Required'; valid = false; }
+    if (!projectName) { document.getElementById('e_projectName').textContent = 'Required'; valid = false; }
+    if (!projectStep) { document.getElementById('e_projectStep').textContent = 'Required'; valid = false; }
+    if (!cssRep)      { document.getElementById('e_cssRep').textContent      = 'Required'; valid = false; }
+    if (!valid) return;
+
+    if (editingId) {
+      const idx = projects.findIndex(p => p.id === editingId);
+      if (idx > -1) projects[idx] = { ...projects[idx], clientName, projectId, projectName, projectStep, cssRep, consultantComments };
+    } else {
+      projects.push({ id: crypto.randomUUID(), clientName, projectId, projectName, projectStep, cssRep, consultantComments });
+    }
+
+    save();
+    rebuildFilters();
+    renderTable();
+    closeModal();
+  }
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  function openConfirm(id) {
+    deleteTargetId = id;
+    const p = projects.find(x => x.id === id);
+    document.getElementById('confirmMsg').textContent =
+      p ? `"${p.projectName}" will be permanently removed.` : 'This action cannot be undone.';
+    document.getElementById('confirmBackdrop').classList.add('open');
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirmBackdrop').classList.remove('open');
+    deleteTargetId = null;
+  }
+
+  function confirmDelete() {
+    projects = projects.filter(p => p.id !== deleteTargetId);
+    save();
+    rebuildFilters();
+    renderTable();
+    closeConfirm();
+  }
+
+  // ── Keyboard ───────────────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); closeConfirm(); }
+    if (e.key === 'Enter' && document.getElementById('modalBackdrop').classList.contains('open')) {
+      if (document.activeElement.tagName !== 'TEXTAREA') saveProject();
+    }
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  document.getElementById('searchInput').addEventListener('input', renderTable);
+  document.getElementById('stepFilter').addEventListener('change', renderTable);
+  document.getElementById('repFilter').addEventListener('change', renderTable);
+
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+  });
+
+  load();
+  rebuildFilters();
+  renderTable();
+</script>
+</body>
+</html>
